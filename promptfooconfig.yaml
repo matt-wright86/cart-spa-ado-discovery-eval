@@ -1,0 +1,160 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: ADO Story Discovery prompt — evaluation suite (cart-spa)
+
+# The prompt under test is the file referenced with @; the rendered ADO work item
+# (story/bug + codebase findings) is appended as the user request.
+prompts:
+  - "@prompt-under-test.md {{request}}"
+
+defaultTest:
+  options:
+    # Grader auto-detects mode: a JSON chat array => grader mode.
+    # See docs/install-claude.md for the CLAUDE_CONFIG_DIR auth note.
+    provider: 'exec: node ./claude.js'
+
+providers:
+  - id: 'exec: node ./claude.js'
+    config:
+      model: 'haiku'
+
+tests:
+  # ========================================================================
+  # 1. PARTIALLY BLOCKED — the core skill: split buildable-now from blocked
+  # ========================================================================
+  - description: 'Partially blocked story — must flag the missing Cart API endpoint'
+    vars:
+      request: |
+        ADO Work Item AB#1001 — User Story — "Support Multiple Shipping Methods (UI)"
+
+        Acceptance Criteria:
+        - AC1: When multiple shipping methods are configured for a product, each method renders as its own molecule in the product tile, ordered by priority.
+        - AC1.1: The selected ship mode is persisted to the cart when the user selects it.
+        - AC1.2: On ship-mode change, the cart list and cart summary data are invalidated and refreshed.
+        - AC2: UX design and accessibility specs are satisfied.
+
+        Codebase findings:
+        - Rendering of multiple methods already exists and is live: getShippingMethodsFromProduct.ts maps Product API shipModes to options; ShippingMolecule.tsx renders them in a SelectorCardGroup.
+        - Selection is local-only: ShippingSection.tsx uses useState plus onChange set to setSelectedId; nothing is persisted to the server.
+        - Cart invalidation helpers already exist and are reusable: src/hooks/api/cart/utils.ts exports invalidateCartQueries and updateCartSummaryQueries.
+        - The Cart API (cart-api) has NO endpoint to persist a ship-mode selection. The per-item PATCH supports quantity only; there is no ship-mode field anywhere in openapi.yaml.
+    assert:
+      - type: contains
+        value: 'endpoint'
+        ignoreCase: true
+      - type: llm-rubric
+        value: The investigation correctly identifies that the Cart API (cart-api) has no endpoint to persist a ship-mode selection, and names this missing endpoint as the blocker for AC1.1.
+        threshold: 0.7
+        metric: blocker-identified
+        weight: 2
+      - type: llm-rubric
+        value: The investigation clearly identifies concrete frontend work that can be implemented now, framed as actual implementation tasks (writing or changing code and tests) rather than merely review or audit, and separates it from the AC1.1 end-to-end behavior that is gated on the missing Cart API endpoint.
+        threshold: 0.7
+        metric: buildable-vs-blocked
+        weight: 2
+      - type: llm-rubric
+        value: The investigation does not misrepresent the codebase. Any file, hook, or endpoint it describes as ALREADY EXISTING is one named in the provided findings, and it does not present a fabricated API contract as if it were already defined. Proposing NEW files or hooks to create as part of the implementation plan is expected and acceptable.
+        threshold: 0.6
+        metric: grounded-in-findings
+        weight: 1
+      - type: javascript
+        value: file://eval-script.js:hasRequiredSections
+      - type: javascript
+        value: file://eval-script.js:citesFiles
+      - type: javascript
+        value: file://eval-script.js:separatesBuildableFromBlocked
+      - type: javascript
+        value: file://eval-script.js:hasActionablePlan
+
+  # ========================================================================
+  # 2. FULLY BUILDABLE — must NOT invent a blocker
+  # ========================================================================
+  - description: 'Fully buildable styling story — should report no backend blockers'
+    vars:
+      request: |
+        ADO Work Item AB#1002 — User Story — "Update the cart summary Checkout button hover state"
+
+        Acceptance Criteria:
+        - AC1: The primary Checkout button uses the updated hover background color from the latest design-system tokens.
+        - AC2: The focus-visible outline meets accessibility contrast requirements.
+
+        Codebase findings:
+        - The Checkout button is the Button primitive from the public UI component library (ui-lib-public), consumed by CartSummary.tsx.
+        - Design-system tokens are available via the design-tokens package; the new hover token already exists.
+        - No API or data changes are involved.
+    assert:
+      - type: contains
+        value: 'design'
+        ignoreCase: true
+      - type: llm-rubric
+        value: The investigation identifies that the change lives in the public UI component library (ui-lib-public) and/or the design-system tokens, consumed by CartSummary.tsx.
+        threshold: 0.7
+        metric: repo-identified
+        weight: 1.5
+      - type: llm-rubric
+        value: The investigation treats this as a frontend-only styling change and does not claim any backend, API, or Cart API dependency or blocker. (Raising a UX or accessibility clarification is acceptable; inventing a backend/API blocker is not.)
+        threshold: 0.7
+        metric: no-invented-backend-blocker
+        weight: 2
+      - type: javascript
+        value: file://eval-script.js:hasRequiredSections
+      - type: javascript
+        value: file://eval-script.js:hasActionablePlan
+
+  # ========================================================================
+  # 3. NEEDS CLARIFICATION — must surface the design gap as an open question
+  # ========================================================================
+  - description: 'Ambiguous story — must raise the missing fallback UX as an open question'
+    vars:
+      request: |
+        ADO Work Item AB#1003 — User Story — "Show estimated delivery date on cart tiles"
+
+        Acceptance Criteria:
+        - AC1: Each cart product tile shows an estimated delivery date (EDD).
+        - AC2: Handle the case where EDD is unavailable. The UX behavior for this case is not specified.
+
+        Codebase findings:
+        - EDD data is available from the shipping-calc hook useProductShippingCalc.ts, but it only fires when a shipToContext (a default shipping address) exists.
+        - For guests, or users with no saved default address, useCartShipToContext.ts returns undefined, so the calc never runs and there is no EDD to show.
+        - The design and Figma do not specify the fallback UI for the no-address / no-EDD case.
+    assert:
+      - type: contains
+        value: 'address'
+        ignoreCase: true
+      - type: llm-rubric
+        value: The investigation raises the unspecified fallback UX for the no-address / no-EDD case (guests or users with no saved default address) as an open question that needs UX or PO clarification.
+        threshold: 0.7
+        metric: raises-ambiguity
+        weight: 2
+      - type: javascript
+        value: file://eval-script.js:hasRequiredSections
+      - type: javascript
+        value: file://eval-script.js:citesFiles
+
+  # ========================================================================
+  # 4. BUG — must pinpoint the root cause location and scope
+  # ========================================================================
+  - description: 'Bug — must pinpoint the code-vs-sequence root cause in cart-spa'
+    vars:
+      request: |
+        ADO Work Item AB#2001 — Bug — "Wrong shipping method shown as selected on cart load"
+
+        Repro: On cart load, the highlighted shipping method does not match the persisted ship code; a different method appears selected than the one the user chose.
+
+        Codebase findings:
+        - CartItemList.tsx passes item.fulfillment.shipCode into the shipping section.
+        - getShippingMethodsFromProduct.ts stores the Product API sequence as the option id, and stores the Product API code separately.
+        - ShippingSection.tsx computes the initial selection by comparing the persisted ship CODE against the option SEQUENCE — a code-vs-sequence mismatch.
+    assert:
+      - type: contains
+        value: 'ShippingSection'
+      - type: llm-rubric
+        value: The investigation pinpoints the code-vs-sequence comparison in ShippingSection.tsx as the root cause of the wrong-selection bug, and concludes the fix is frontend-only within the cart-spa (no backend dependency).
+        threshold: 0.7
+        metric: root-cause-found
+        weight: 2
+      - type: javascript
+        value: file://eval-script.js:hasRequiredSections
+      - type: javascript
+        value: file://eval-script.js:citesFiles
+
+outputPath: results.html

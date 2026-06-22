@@ -1,0 +1,99 @@
+# ADO Story Discovery — Prompt & Evaluation Suite
+
+A production prompt I use **multiple times a day** on a **cart SPA** team, with a full
+[promptfoo](https://promptfoo.dev) evaluation suite, developed using Evaluation Driven Development (EDD).
+
+## Purpose
+
+This prompt turns an **Azure DevOps (ADO) work item** — a user story or a bug — into a
+**structured engineering investigation** before any code is written. Given the work item
+(title, type, acceptance criteria) and codebase findings gathered from the relevant repos, it
+produces a consistent Markdown document with:
+
+- **TL;DR** — what already exists, the real gap, and whether the story is buildable now, partially blocked, or fully blocked
+- **Affected Repos** — the specific repo(s) the work lives in, mapped from the symptom
+- **Acceptance Criteria** — each AC labeled *Buildable now*, *Blocked*, or *Needs clarification*
+- **Blockers** — the precise missing dependency (an API field/endpoint, an upstream story, a design gap)
+- **Affected Files** — concrete files to change, grounded in the findings
+- **Open Questions** — what UX, API, or the PO must clarify
+- **Implementation Plan** — phased so unblocked work can start immediately
+
+## The problem it solves
+
+On a multi-repo commerce platform (the cart SPA, two shared UI component libraries, the Java Cart API,
+a headless CMS, several upstream services), the expensive failure mode is **starting a story and
+discovering halfway through that it's blocked on a backend endpoint that doesn't exist yet** — or
+burning a sprint on a ticket whose acceptance criteria were ambiguous from the start.
+
+This prompt front-loads that risk. Its single most important job is to **separate what can be built
+now from what is blocked**, name the exact blocker and the contract the frontend needs, and surface
+the open questions early. The output drops straight into `web-cart-spa/docs/<story>/investigation.md`
+and drives sprint planning and the work itself.
+
+## How often I run it
+
+**Multiple times daily** — on essentially every story or bug I pick up, and again when re-checking a
+blocked story to see whether its backend dependency has landed.
+
+## Why it needs evaluations
+
+The output is only useful if it's *reliable*: it must consistently produce the full structure, ground
+its claims in the actual findings (never fabricate files or API contracts), and — above all — get the
+**buildable-vs-blocked** call right. The eval suite below is the regression net that keeps the prompt
+honest as I tune it.
+
+## Evaluation suite
+
+`promptfooconfig.yaml` runs the prompt against four representative scenarios, using all three EDD
+evaluation types:
+
+| Scenario | What it guards against | Eval types |
+|---|---|---|
+| **Partially blocked** (ship-mode persistence) | Missing the backend-endpoint blocker; failing to split buildable-now from blocked work | `contains`, `llm-rubric` ×3, `javascript` ×4 |
+| **Fully buildable** (styling/token change) | *Inventing* a backend blocker that doesn't exist | `contains`, `llm-rubric` ×2, `javascript` ×2 |
+| **Needs clarification** (unspecified fallback UX) | Failing to surface a design gap as an open question | `contains`, `llm-rubric`, `javascript` ×2 |
+| **Bug** (code-vs-sequence mismatch) | Failing to pinpoint the root-cause location and scope | `contains`, `llm-rubric`, `javascript` ×2 |
+
+Custom script assertions live in `eval-script.js`:
+
+| Function | Checks |
+|---|---|
+| `hasRequiredSections` | All seven investigation sections are present |
+| `citesFiles` | Plan is grounded in concrete source files (≥2 references) |
+| `separatesBuildableFromBlocked` | Output explicitly distinguishes buildable-now from blocked work |
+| `hasActionablePlan` | Implementation plan has ordered, numbered steps |
+
+## Running it
+
+```bash
+npx promptfoo eval --no-cache
+npx promptfoo view        # interactive results UI
+```
+
+Always use `--no-cache`: the provider script (`claude.js`) and the prompt (`prompt-under-test.md`)
+are external files, and promptfoo's cache key doesn't track changes inside them.
+
+### Provider / grader
+
+Both the response provider and the rubric grader run through the **Claude Code CLI** via `claude.js`
+(provider mode uses `haiku`; the rubric grader uses `sonnet` for reliable JSON scoring). See
+[`docs/install-claude.md`](docs/install-claude.md) to install and authenticate the CLI.
+
+> **Auth note:** if your `claude` login lives in a non-default `CLAUDE_CONFIG_DIR`, export it before
+> running, or the spawned `claude` falls back to `~/.claude` and the eval fails with
+> `401 Invalid authentication credentials`:
+> ```bash
+> CLAUDE_CONFIG_DIR="$HOME/.claude-personal" npx promptfoo eval --no-cache
+> ```
+
+## Files
+
+```
+.
+├── promptfooconfig.yaml      # eval config: providers, grader, 4 test scenarios
+├── prompt-under-test.md      # the ADO Story Discovery prompt
+├── eval-script.js            # custom JavaScript assertions
+├── claude.js                 # Claude Code CLI provider + grader (auto-detects mode)
+├── docs/install-claude.md    # CLI install + auth notes
+└── README.md
+```

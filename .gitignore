@@ -1,0 +1,7 @@
+node_modules/
+*.html
+results.json
+results*.json
+.promptfoo/
+.DS_Store
+npm-debug.log*

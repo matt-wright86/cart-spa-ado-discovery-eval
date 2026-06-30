@@ -67,4 +67,37 @@ function hasActionablePlan(output) {
   };
 }
 
-module.exports = { hasRequiredSections, citesFiles, separatesBuildableFromBlocked, hasActionablePlan };
+// ---- PR-review prompt assertions (pr-review-prompt.md) ----
+
+const REVIEW_SECTIONS = ['Summary', 'Blocking Issues', 'Non-blocking Suggestions', 'Test Coverage', 'Verdict'];
+
+/** All required PR-review sections are present. */
+function hasReviewSections(output) {
+  const text = output.toLowerCase();
+  const missing = REVIEW_SECTIONS.filter((s) => !text.includes(s.toLowerCase()));
+  const pass = missing.length === 0;
+  return {
+    pass,
+    score: (REVIEW_SECTIONS.length - missing.length) / REVIEW_SECTIONS.length,
+    reason: pass ? 'All review sections present' : `Missing sections: ${missing.join(', ')}`,
+  };
+}
+
+/** Ends with a clear, decisive verdict. */
+function hasReviewVerdict(output) {
+  const pass = /\b(approve with nits|request changes|approve)\b/i.test(output);
+  return {
+    pass,
+    score: pass ? 1 : 0,
+    reason: pass ? 'Contains an explicit verdict' : 'No explicit Approve / Approve with nits / Request changes verdict',
+  };
+}
+
+module.exports = {
+  hasRequiredSections,
+  citesFiles,
+  separatesBuildableFromBlocked,
+  hasActionablePlan,
+  hasReviewSections,
+  hasReviewVerdict,
+};

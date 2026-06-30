@@ -1,0 +1,106 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: PR Review prompt — evaluation suite (cart-spa)
+
+# Second reusable template: reviews a pull request diff.
+# Run with: npx promptfoo eval -c promptfooconfig.pr-review.yaml --no-cache
+prompts:
+  - "@pr-review-prompt.md {{request}}"
+
+defaultTest:
+  options:
+    provider: 'exec: node ./claude.js'
+
+providers:
+  - id: 'exec: node ./claude.js'
+    config:
+      model: 'haiku'
+
+tests:
+  # ========================================================================
+  # 1. PR WITH A REAL BUG — must block (stale closure + missing test)
+  # ========================================================================
+  - description: 'Buggy PR — must flag the stale-closure dependency bug and the missing test'
+    vars:
+      request: |
+        PR #1201 — "Add live price formatting to cart line items"
+
+        Description: Adds a formatPrice helper and wires it into PriceLabel so the
+        displayed price updates when amount or currency changes.
+
+        Diff:
+        --- a/src/components/PriceLabel.tsx
+        +++ b/src/components/PriceLabel.tsx
+        @@
+        -export function PriceLabel({ amount, currency }) {
+        -  return <span>{amount}</span>;
+        +export function PriceLabel({ amount, currency }) {
+        +  const [formatted, setFormatted] = useState('');
+        +  useEffect(() => {
+        +    setFormatted(formatPrice(amount, currency));
+        +  }, [amount]); // dependency array
+        +  return <span>{formatted}</span>;
+        +}
+        +
+        +export function formatPrice(amount, currency) {
+        +  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+        +}
+
+        No test files are included in this PR.
+    assert:
+      - type: javascript
+        value: file://eval-script.js:hasReviewSections
+      - type: javascript
+        value: file://eval-script.js:hasReviewVerdict
+      - type: contains
+        value: 'currency'
+        ignoreCase: true
+      - type: llm-rubric
+        value: The review flags as a blocking issue that the useEffect dependency array omits `currency`, so the formatted price will be stale when only the currency changes.
+        threshold: 0.7
+        metric: catches-stale-closure
+        weight: 2
+      - type: llm-rubric
+        value: The review flags the absence of any test for the new formatPrice / PriceLabel logic as a blocking issue or a required follow-up before merge.
+        threshold: 0.6
+        metric: catches-missing-test
+        weight: 1
+      - type: llm-rubric
+        value: The verdict is "Request changes" (not Approve), justified by the correctness bug and/or the missing test.
+        threshold: 0.7
+        metric: verdict-request-changes
+        weight: 1.5
+
+  # ========================================================================
+  # 2. CLEAN PR — must NOT invent blocking issues
+  # ========================================================================
+  - description: 'Trivial, tested PR — should approve without inventing blockers'
+    vars:
+      request: |
+        PR #1202 — "Update empty-cart message copy"
+
+        Description: Updates the empty-cart message to match the new UX copy, and
+        updates the existing test to match.
+
+        Diff:
+        --- a/src/components/EmptyCart.tsx
+        +++ b/src/components/EmptyCart.tsx
+        @@
+        -  <Typography>Your cart is empty.</Typography>
+        +  <Typography>Your cart is empty — start shopping to add items.</Typography>
+        --- a/src/components/EmptyCart.test.tsx
+        +++ b/src/components/EmptyCart.test.tsx
+        @@
+        -  expect(screen.getByText('Your cart is empty.')).toBeInTheDocument();
+        +  expect(screen.getByText('Your cart is empty — start shopping to add items.')).toBeInTheDocument();
+    assert:
+      - type: javascript
+        value: file://eval-script.js:hasReviewSections
+      - type: javascript
+        value: file://eval-script.js:hasReviewVerdict
+      - type: llm-rubric
+        value: The review treats this as a small, correct, test-covered copy change. It does not invent blocking issues, and the verdict is "Approve" or "Approve with nits".
+        threshold: 0.7
+        metric: no-invented-blockers
+        weight: 2
+
+outputPath: results.html

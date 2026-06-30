@@ -27,10 +27,13 @@ Concrete files to change, as a list or table with paths; reference functions/com
 Questions for UX, API, or the PO that must be answered before or during implementation. If there are none, write "None."
 
 ## Implementation Plan
-Numbered, ordered steps. If some ACs are blocked, phase the plan: Phase 1 must list concrete frontend implementation tasks that can begin now (writing/changing code and tests against the known or expected contract) — not merely "review" or "audit" work. Clearly mark the later phase(s) that are gated on the blocker.
+Numbered, ordered steps. When some ACs are blocked, you MUST phase the plan explicitly with these two labels:
+- **Phase 1 — buildable now:** concrete frontend implementation tasks that can begin immediately. Begin each task with an imperative implementation verb (Add, Implement, Write, Refactor, Wire, Create, Update) that names the specific file/hook/component to change — never "Verify", "Confirm", "Ensure", "Check", "Review", "Audit", or "Investigate". Phase 1 MUST include at least one task that writes or updates tests.
+- **Phase 2 — blocked / gated:** the work that cannot complete until the blocker is resolved, each step explicitly labeled with the blocker it waits on.
 
 Rules:
-- Separating what is **buildable now** from what is **blocked** is the single most important output. Always make that distinction explicit.
+- Separating what is **buildable now** from what is **blocked** is the single most important output. Make the distinction explicit in two places: (1) label every acceptance criterion, and (2) split the Implementation Plan into a "buildable now" Phase 1 and a "blocked / gated" Phase 2. When a story is partially blocked, name at least two specific frontend implementation tasks (specific files or hooks to write or change) that can start now, independent of the blocker.
+- Build to the contract. When the blocker is a missing backend endpoint, the frontend can still be implemented now against the *expected* contract. Phase 1 should include writing the API hook/mutation to the anticipated request/response shape, plus related frontend fixes (selection initialization, priority ordering, optimistic UI updates, reusing existing cache-invalidation helpers) and their tests. Reserve only the final end-to-end wiring and verification against the live endpoint for Phase 2 — never defer all frontend work just because the endpoint is not yet live.
 - Cite specific files, components, hooks, or endpoints from the provided findings. Never invent file paths or fabricate an API contract.
 - If the work depends on a backend endpoint or field that the findings say does not exist, call it out as a blocker and specify the contract the frontend should be built against.
 - Be concise and concrete — no filler. A developer should be able to start work directly from this document.

@@ -1,0 +1,37 @@
+{
+  "label": "BASELINE",
+  "promptCommit": "7cf73a7",
+  "grader": "sonnet",
+  "provider": "haiku",
+  "runs": 4,
+  "test1PassRatePct": 75,
+  "note": "Test 1 (partially-blocked) flaky on the buildable-vs-blocked llm-rubric; matches evaluator run (75%).",
+  "perRun": [
+    {
+      "run": 1,
+      "testsPassed": 4,
+      "testsTotal": 4,
+      "failedAssertions": []
+    },
+    {
+      "run": 2,
+      "testsPassed": 3,
+      "testsTotal": 4,
+      "failedAssertions": [
+        "Test1:buildable-vs-blocked"
+      ]
+    },
+    {
+      "run": 3,
+      "testsPassed": 4,
+      "testsTotal": 4,
+      "failedAssertions": []
+    },
+    {
+      "run": 4,
+      "testsPassed": 4,
+      "testsTotal": 4,
+      "failedAssertions": []
+    }
+  ]
+}

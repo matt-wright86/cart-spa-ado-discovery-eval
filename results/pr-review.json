@@ -1,0 +1,31 @@
+{
+  "label": "PR-REVIEW",
+  "grader": "sonnet",
+  "provider": "haiku",
+  "config": "promptfooconfig.pr-review.yaml",
+  "runs": 4,
+  "passRatePct": 100,
+  "note": "Two scenarios: a buggy PR that must be blocked (stale-closure dependency bug + missing test), and a trivial tested PR that must be approved without invented blockers.",
+  "perRun": [
+    {
+      "run": 1,
+      "testsPassed": 2,
+      "testsTotal": 2
+    },
+    {
+      "run": 2,
+      "testsPassed": 2,
+      "testsTotal": 2
+    },
+    {
+      "run": 3,
+      "testsPassed": 2,
+      "testsTotal": 2
+    },
+    {
+      "run": 4,
+      "testsPassed": 2,
+      "testsTotal": 2
+    }
+  ]
+}

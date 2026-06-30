@@ -1,0 +1,47 @@
+{
+  "label": "AFTER-FIX",
+  "promptCommit": "c1ea026",
+  "grader": "sonnet",
+  "provider": "haiku",
+  "runs": 6,
+  "test1PassRatePct": 100,
+  "note": "After hardening prompt-under-test.md: implementation-verb Phase 1, mandatory test task, and build-to-the-contract rule. Test 1 stable.",
+  "perRun": [
+    {
+      "run": 1,
+      "testsPassed": 4,
+      "testsTotal": 4,
+      "failedAssertions": []
+    },
+    {
+      "run": 2,
+      "testsPassed": 4,
+      "testsTotal": 4,
+      "failedAssertions": []
+    },
+    {
+      "run": 3,
+      "testsPassed": 4,
+      "testsTotal": 4,
+      "failedAssertions": []
+    },
+    {
+      "run": 4,
+      "testsPassed": 4,
+      "testsTotal": 4,
+      "failedAssertions": []
+    },
+    {
+      "run": 5,
+      "testsPassed": 4,
+      "testsTotal": 4,
+      "failedAssertions": []
+    },
+    {
+      "run": 6,
+      "testsPassed": 4,
+      "testsTotal": 4,
+      "failedAssertions": []
+    }
+  ]
+}

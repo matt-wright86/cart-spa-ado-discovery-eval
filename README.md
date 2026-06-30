@@ -66,7 +66,8 @@ Custom script assertions live in `eval-script.js`:
 ## Running it
 
 ```bash
-npx promptfoo eval --no-cache
+npx promptfoo eval --no-cache                                  # ADO Story Discovery suite
+npx promptfoo eval -c promptfooconfig.pr-review.yaml --no-cache # PR Review suite
 npx promptfoo view        # interactive results UI
 ```
 
@@ -86,14 +87,29 @@ Both the response provider and the rubric grader run through the **Claude Code C
 > CLAUDE_CONFIG_DIR="$HOME/.claude-personal" npx promptfoo eval --no-cache
 > ```
 
+## Eval history (EDD in practice)
+
+This prompt was iterated using its own eval suite. Full detail in [`CHANGELOG.md`](CHANGELOG.md); snapshots in [`results/`](results/).
+
+| Stage | Prompt commit | Test 1 (partially-blocked) pass rate |
+|---|---|---|
+| Baseline | `7cf73a7` | **75%** (flaky on the `buildable-vs-blocked` rubric) |
+| After fix | `c1ea026` | **100%** (6/6 runs) |
+
+The eval caught that the prompt framed buildable-now work as "review/audit" and went thin on partially-blocked stories. The fix (require implementation-verb Phase 1 tasks + a test task, and a "build to the contract" rule) took Test 1 from **75% → 100%**.
+
 ## Files
 
 ```
 .
-├── promptfooconfig.yaml      # eval config: providers, grader, 4 test scenarios
-├── prompt-under-test.md      # the ADO Story Discovery prompt
-├── eval-script.js            # custom JavaScript assertions
-├── claude.js                 # Claude Code CLI provider + grader (auto-detects mode)
-├── docs/install-claude.md    # CLI install + auth notes
+├── promptfooconfig.yaml            # ADO Story Discovery eval: 4 scenarios
+├── prompt-under-test.md            # the ADO Story Discovery prompt
+├── promptfooconfig.pr-review.yaml  # PR Review eval: 2 scenarios
+├── pr-review-prompt.md             # the PR Review prompt (2nd template)
+├── eval-script.js                  # custom JavaScript assertions
+├── claude.js                       # Claude Code CLI provider + grader (auto-detects mode)
+├── results/                        # committed before/after eval snapshots
+├── CHANGELOG.md                    # eval history + measured deltas
+├── docs/install-claude.md          # CLI install + auth notes
 └── README.md
 ```
